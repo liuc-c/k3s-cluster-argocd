@@ -1,0 +1,31 @@
+# 这是最核心的部署文件，请注意我们移除了环境相关的变量(DOMAIN)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vaultwarden
+  labels:
+    app: vaultwarden
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vaultwarden
+  template:
+    metadata:
+      labels:
+        app: vaultwarden
+    spec:
+      containers:
+        - name: vaultwarden
+          image: vaultwarden/server:latest
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+          volumeMounts:
+            - name: data
+              mountPath: /data/
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: vaultwarden-data-pvc

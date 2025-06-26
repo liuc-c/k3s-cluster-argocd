@@ -1,0 +1,13 @@
+# 这是一个“补丁”文件，专门用来给base中的Deployment添加生产环境的域名变量
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vaultwarden
+spec:
+  template:
+    spec:
+      containers:
+        - name: vaultwarden
+          env:
+            - name: DOMAIN
+              value: "https://vaultwarden.liuovo.com"

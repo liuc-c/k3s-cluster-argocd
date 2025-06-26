@@ -1,0 +1,24 @@
+# Ingress资源与域名和TLS证书强相关，是典型的环境特定资源
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: vaultwarden-ingress
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: "vaultwarden.liuovo.com"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: vaultwarden
+                port:
+                  number: 80
+  tls:
+    - hosts:
+        - "vaultwarden.liuovo.com"
+      secretName: vaultwarden-tls
