@@ -11,3 +11,4 @@ helmCharts:
   releaseName: monitoring-stack
   namespace: monitoring
   valuesFile: values-prod.yaml            # 包含所有配置的 values 文件
+  includeCRDs: true                       # 确保安装 CRD

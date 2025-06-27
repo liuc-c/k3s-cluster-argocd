@@ -1,5 +1,15 @@
-# apps/monitoring/overlays/prod/values-prod.yaml
+# apps/monitoring/prod/values-prod.yaml
 # 生产环境配置，包含基础配置和生产环境特有配置
+
+# Prometheus Operator 配置
+prometheusOperator:
+  # 确保安装 CRD
+  createCustomResource: true
+  # 启用 admission webhooks
+  admissionWebhooks:
+    enabled: true
+    patch:
+      enabled: true
 
 # K3s 通用配置
 kube-dns:
