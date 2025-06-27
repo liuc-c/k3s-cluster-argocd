@@ -8,5 +8,10 @@ resources:
   - ../../base
   - ingress.yaml
 
-# 2. 将本目录下的所有资源都部署在uptime-kuma命名空间中
-namespace: uptime-kuma
+# 2. 将本目录下的所有资源都部署在环境特定的命名空间中
+namespace: uptime-kuma-prod
+
+# 3. 为生产环境添加特定标签
+commonLabels:
+  environment: prod
+  tier: production
