@@ -2,11 +2,3 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-# 定义要使用的 Helm Chart
-helmCharts:
-- name: kube-prometheus-stack
-  repo: https://prometheus-community.github.io/helm-charts
-  version: 75.6.0 # 固定版本以保证部署的可预测性
-  releaseName: monitoring-stack
-  namespace: monitoring
-  valuesFile: values.yaml # 使用同目录下的通用配置文件

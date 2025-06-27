@@ -1,13 +1,15 @@
-# apps/monitoring/overlays/prod/kustomization.yaml
+﻿# apps/monitoring/overlays/prod/kustomization.yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-# 1. 继承基础配置
-bases:
-  - ../../base
-
-# 2. 这是“覆盖”或“打补丁” Helm Chart 的方式
-#    通过提供一个额外的 values 文件，其中的值会覆盖 base 中的值。
+# 生产环境的监控配置
+# 直接定义 Helm Chart，包含基础配置和生产环境覆盖
 helmCharts:
-- name: kube-prometheus-stack # 必须与 base 中的 name 保持一致
-  valuesFile: values-prod.yaml # 加载生产环境的特定配置
+- name: kube-prometheus-stack
+  repo: https://prometheus-community.github.io/helm-charts
+  version: 75.6.0
+  releaseName: monitoring-stack
+  namespace: monitoring
+  valuesFiles:
+    - ../../base/values.yaml      # 先加载基础配置
+    - values-prod.yaml            # 再加载生产环境覆盖配置
