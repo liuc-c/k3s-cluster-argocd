@@ -41,14 +41,14 @@ spec:
       # 从启用标记文件解析应用名称和环境
       # 文件格式：apps/app-name/.enabled-environment
       # 从路径 apps/uptime-kuma/.enabled-prod 中提取 uptime-kuma 和 prod
-      name: '{{.path.path | dir | base}}-{{.path.filename | trimPrefix ".enabled-"}}'
+      name: '{{index .path.segments 1}}-{{.path.filename | trimPrefix ".enabled-"}}'
       namespace: argocd
 
       # 标签系统
       labels:
         # 基础管理标签
         app.kubernetes.io/managed-by: applicationset
-        app.kubernetes.io/name: '{{.path.path | dir | base}}'
+        app.kubernetes.io/name: '{{index .path.segments 1}}'
         app.kubernetes.io/environment: '{{.path.filename | trimPrefix ".enabled-"}}'
         app.kubernetes.io/part-of: k3s-cluster
 
@@ -59,7 +59,7 @@ spec:
       # 注解
       annotations:
         gitops.argoproj.io/enabled-file: '{{.path.path}}'
-        gitops.argoproj.io/app-name: '{{.path.path | dir | base}}'
+        gitops.argoproj.io/app-name: '{{index .path.segments 1}}'
         gitops.argoproj.io/environment: '{{.path.filename | trimPrefix ".enabled-"}}'
         argocd.argoproj.io/managed-by: config-driven-apps
 
@@ -74,7 +74,7 @@ spec:
       source:
         repoURL: https://github.com/liuc-c/k3s-cluster-argocd.git
         # 构建路径：apps/app-name/overlays/environment 或 apps/app-name/environment
-        path: 'apps/{{.path.path | dir | base}}/overlays/{{.path.filename | trimPrefix ".enabled-"}}'
+        path: 'apps/{{index .path.segments 1}}/overlays/{{.path.filename | trimPrefix ".enabled-"}}'
         targetRevision: HEAD
 
         # Kustomize 配置
@@ -85,6 +85,9 @@ spec:
             gitops.argoproj.io/config-driven: "true"
           commonAnnotations:
             gitops.argoproj.io/enabled-file: '{{.path.path}}'
+            gitops.argoproj.io/generated-path: 'apps/{{index .path.segments 1}}/overlays/{{.path.filename | trimPrefix ".enabled-"}}'
+            gitops.argoproj.io/app-name: '{{index .path.segments 1}}'
+            gitops.argoproj.io/environment: '{{.path.filename | trimPrefix ".enabled-"}}'
 
       # 目标配置：使用应用名称作为命名空间
       destination:
