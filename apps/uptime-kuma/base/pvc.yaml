@@ -1,0 +1,11 @@
+# 持久化存储声明，用于存储 uptime-kuma 数据
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: uptime-kuma-data-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi

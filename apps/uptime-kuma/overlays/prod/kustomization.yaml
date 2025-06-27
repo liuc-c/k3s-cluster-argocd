@@ -1,0 +1,12 @@
+# 生产环境的Kustomization文件
+# 它会加载base中的所有资源，然后应用本目录下的补丁和新资源
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# 1. 指向基础配置和添加本目录独有的资源
+resources:
+  - ../../base
+  - ingress.yaml
+
+# 2. 将本目录下的所有资源都部署在uptime-kuma命名空间中
+namespace: uptime-kuma
