@@ -22,6 +22,8 @@ spec:
 
     # 跟踪默认分支 (例如 main 或 master) 的最新变更
     targetRevision: HEAD
+    kustomize:
+      buildOptions: "--enable-helm"
 
   # 定义部署目标 (您的 K3s 集群)
   destination:
