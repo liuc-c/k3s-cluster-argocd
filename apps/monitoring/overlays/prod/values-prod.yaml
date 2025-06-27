@@ -1,0 +1,35 @@
+# apps/monitoring/overlays/prod/values-prod.yaml
+# 生产环境特有配置，使用 ingressClassName
+
+prometheus:
+  ingress:
+    enabled: true
+    ingressClassName: "traefik"
+    annotations:
+      cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    hosts: [ "prometheus.liuovo.com" ]
+    tls:
+      - secretName: prometheus-liuovo-com-tls
+        hosts: [ "prometheus.liuovo.com" ]
+
+grafana:
+  ingress:
+    enabled: true
+    ingressClassName: "traefik"
+    annotations:
+      cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    hosts: [ "grafana.liuovo.com" ]
+    tls:
+      - secretName: grafana-liuovo-com-tls
+        hosts: [ "grafana.liuovo.com" ]
+
+alertmanager:
+  ingress:
+    enabled: true
+    ingressClassName: "traefik"
+    annotations:
+      cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    hosts: [ "alertmanager.liuovo.com" ]
+    tls:
+      - secretName: alertmanager-liuovo-com-tls
+        hosts: 

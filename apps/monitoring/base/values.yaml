@@ -1,0 +1,13 @@
+# apps/monitoring/base/values.yaml
+
+# K3s 通用配置
+kube-dns:
+  enabled: false
+kubeProxy:
+  enabled: false
+prometheus-node-exporter:
+  hostRootfs: false
+
+# Grafana 默认密码 (建议首次登录后修改)
+grafana:
+  adminPassword: "prom-operator" 
