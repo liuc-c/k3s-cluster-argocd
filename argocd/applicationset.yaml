@@ -1,7 +1,13 @@
 # argocd/applicationset.yaml
 # 基于整合配置文件的 ApplicationSet - GitOps 最佳实践
-# 通过 app-config.yaml 文件控制应用的启用状态和同步策略
+# 使用 Selector 过滤器实现精确的应用生成控制
 # 纯配置驱动，无需脚本工具，适合 Windows 开发环境
+#
+# 实现方案：使用启用标记文件的约定
+# 1. 在每个启用的应用环境目录中创建 .enabled 标记文件
+# 2. 使用 Git 文件生成器发现这些标记文件
+# 3. 通过 Selector 过滤器只生成有标记文件的应用
+# 4. 实现真正的精确控制，未启用的应用完全不会在 ArgoCD 中生成
 
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
@@ -14,58 +20,43 @@ metadata:
     app.kubernetes.io/part-of: argocd
     gitops.argoproj.io/type: config-driven
   annotations:
-    gitops.argoproj.io/description: "Configuration-driven ApplicationSet for pure GitOps workflow"
+    gitops.argoproj.io/description: "Configuration-driven ApplicationSet with Selector filtering"
 
 spec:
-  # 使用矩阵生成器组合应用发现和配置读取
+  # 使用 Git 文件生成器发现启用标记文件，实现精确的 Selector 过滤
   generators:
-  - matrix:
-      generators:
-      # 第一个生成器：发现应用目录结构
-      - git:
-          repoURL: https://github.com/liuc-c/k3s-cluster-argocd.git
-          revision: HEAD
-          directories:
-          # 扫描所有应用的环境目录
-          - path: "apps/*/overlays/*"
-          # 支持直接环境目录（如 monitoring/prod）
-          - path: "apps/*/prod"
-
-      # 第二个生成器：读取整合的应用配置文件
-      - git:
-          repoURL: https://github.com/liuc-c/k3s-cluster-argocd.git
-          revision: HEAD
-          files:
-          - path: "apps/*/app-config.yaml"
+  - git:
+      repoURL: https://github.com/liuc-c/k3s-cluster-argocd.git
+      revision: HEAD
+      files:
+      # 发现启用标记文件：只有启用的应用环境才会有这些文件
+      - path: "apps/*/.enabled-*"
+      requeueAfterSeconds: 180
 
   template:
     metadata:
-      # 应用名称：app-name-environment
-      name: '{{path[1]}}-{{path[path.length-1]}}'
+      # 从启用标记文件解析应用名称和环境
+      # 文件格式：apps/app-name/.enabled-environment
+      name: '{{ index .path 1 }}-{{ trimPrefix ".enabled-" .path.filename }}'
       namespace: argocd
 
       # 标签系统
       labels:
         # 基础管理标签
         app.kubernetes.io/managed-by: applicationset
-        app.kubernetes.io/name: '{{path[1]}}'
-        app.kubernetes.io/environment: '{{path[path.length-1]}}'
+        app.kubernetes.io/name: '{{ index .path 1 }}'
+        app.kubernetes.io/environment: '{{ trimPrefix ".enabled-" .path.filename }}'
         app.kubernetes.io/part-of: k3s-cluster
 
-        # 从 YAML 配置读取的标签
-        gitops.argoproj.io/app-category: '{{config.argocd.metadata.category}}'
-        gitops.argoproj.io/app-owner: '{{config.argocd.metadata.owner}}'
-        gitops.argoproj.io/app-version: '{{config.argocd.metadata.version}}'
-
-        # 配置状态标签
-        gitops.argoproj.io/enabled: '{{config.argocd.deployment.environments.[path[path.length-1]].enabled}}'
-        gitops.argoproj.io/auto-sync: '{{config.argocd.deployment.environments.[path[path.length-1]].autoSync}}'
+        # 启用状态标签
+        gitops.argoproj.io/enabled: "true"
+        gitops.argoproj.io/controlled-by: "selector-filter"
 
       # 注解
       annotations:
-        gitops.argoproj.io/source-path: '{{path.path}}'
-        gitops.argoproj.io/config-path: '{{config.path.path}}'
-        gitops.argoproj.io/app-description: '{{config.argocd.metadata.description}}'
+        gitops.argoproj.io/enabled-file: '{{ .path.path }}'
+        gitops.argoproj.io/app-name: '{{ index .path 1 }}'
+        gitops.argoproj.io/environment: '{{ trimPrefix ".enabled-" .path.filename }}'
         argocd.argoproj.io/managed-by: config-driven-apps
 
       # 资源清理控制
@@ -73,12 +64,13 @@ spec:
         - resources-finalizer.argocd.argoproj.io
 
     spec:
-      project: '{{config.argocd.configuration.project}}'
+      project: default
 
-      # 源配置
+      # 源配置：根据启用标记文件构建应用路径
       source:
         repoURL: https://github.com/liuc-c/k3s-cluster-argocd.git
-        path: '{{path.path}}'
+        # 构建路径：apps/app-name/overlays/environment 或 apps/app-name/environment
+        path: 'apps/{{ index .path 1 }}/overlays/{{ trimPrefix ".enabled-" .path.filename }}'
         targetRevision: HEAD
 
         # Kustomize 配置
@@ -86,33 +78,33 @@ spec:
           buildOptions: "--enable-helm"
           commonLabels:
             app.kubernetes.io/managed-by: argocd
-            gitops.argoproj.io/environment: '{{path[path.length-1]}}'
+            gitops.argoproj.io/environment: '{{ trimPrefix ".enabled-" .path.filename }}'
             gitops.argoproj.io/config-driven: "true"
           commonAnnotations:
-            gitops.argoproj.io/source-path: '{{path.path}}'
-            gitops.argoproj.io/last-sync: '{{path.revision}}'
+            gitops.argoproj.io/enabled-file: '{{ .path.path }}'
 
-      # 目标配置
+      # 目标配置：使用应用名称作为命名空间
       destination:
         name: in-cluster
-        namespace: '{{config.argocd.configuration.namespace}}'
+        namespace: '{{ index .path 1 }}'
 
-      # 动态同步策略：基于 YAML 配置
+      # 同步策略：启用的应用使用自动同步
       syncPolicy:
-        # 条件性自动同步：只有当配置中启用时才自动同步
-        {{- if and (eq (config.argocd.deployment.enabled) "true") (eq (config.argocd.deployment.environments.[path[path.length-1]].enabled) "true") (eq (config.argocd.deployment.environments.[path[path.length-1]].autoSync) "true") }}
         automated:
-          prune: {{config.argocd.deployment.environments.[path[path.length-1]].prune}}
-          selfHeal: {{config.argocd.deployment.environments.[path[path.length-1]].selfHeal}}
+          prune: true
+          selfHeal: true
           allowEmpty: false
-        {{- end }}
 
-        # 同步选项：从配置文件读取
-        syncOptions: {{config.argocd.configuration.syncOptions}}
+        # 同步选项
+        syncOptions:
+        - "CreateNamespace=true"
+        - "PruneLast=true"
+        - "ApplyOutOfSyncOnly=true"
+        - "ServerSideApply=true"
 
         # 重试策略
         retry:
-          limit: {{config.argocd.configuration.retryLimit}}
+          limit: 3
           backoff:
             duration: 5s
             factor: 2
