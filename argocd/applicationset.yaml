@@ -78,7 +78,6 @@ spec:
 
         # Kustomize 配置
         kustomize:
-          buildOptions: "--enable-helm"
           commonLabels:
             app.kubernetes.io/managed-by: argocd
             gitops.argoproj.io/environment: '{{.path.filename | trimPrefix ".enabled-"}}'
