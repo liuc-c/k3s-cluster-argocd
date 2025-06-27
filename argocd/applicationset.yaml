@@ -89,10 +89,10 @@ spec:
             gitops.argoproj.io/app-name: '{{index .path.segments 1}}'
             gitops.argoproj.io/environment: '{{.path.filename | trimPrefix ".enabled-"}}'
 
-      # 目标配置：使用应用名称作为命名空间
+      # 目标配置：让 Kustomize 自己管理命名空间
       destination:
         name: in-cluster
-        namespace: '{{index .path 1}}'
+        # 不指定命名空间，让 Kustomize 配置决定
 
       # 同步策略：启用的应用使用自动同步
       syncPolicy:
