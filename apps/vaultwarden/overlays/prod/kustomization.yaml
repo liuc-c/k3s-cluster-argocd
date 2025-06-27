@@ -3,17 +3,17 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-# 1. 指向基础配置
+# 1. 指向基础配置和添加本目录独有的资源
 resources:
   - ../../base
+  - ingress.yaml
 
 # 2. 将本目录下的所有资源都部署在vaultwarden命名空间中
 namespace: vaultwarden
 
-# 3. 添加本目录独有的资源（Ingress）
-resources:
-  - ingress.yaml
-
-# 4. 应用补丁文件（为Deployment添加环境变量）
-patchesStrategicMerge:
-  - deployment-patch.yaml
+# 3. 应用补丁文件（为Deployment添加环境变量）
+patches:
+  - path: deployment-patch.yaml
+    target:
+      kind: Deployment
+      name: vaultwarden
