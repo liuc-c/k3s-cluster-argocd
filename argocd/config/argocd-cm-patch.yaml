@@ -1,0 +1,16 @@
+# argocd/config/argocd-cm-patch.yaml
+# 全局配置 Kustomize 构建选项以启用 Helm 支持
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-cm
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argocd-cm
+    app.kubernetes.io/part-of: argocd
+data:
+  # 全局启用 Helm 支持，这样所有使用 Kustomize 的应用都可以渲染 Helm Charts
+  kustomize.buildOptions: "--enable-helm"
+  
+  # 可选：如果需要其他构建选项，可以添加
+  # kustomize.buildOptions: "--enable-helm --load-restrictor LoadRestrictionsNone"
