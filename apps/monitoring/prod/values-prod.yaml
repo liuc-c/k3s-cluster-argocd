@@ -1,6 +1,15 @@
 # apps/monitoring/overlays/prod/values-prod.yaml
-# 生产环境特有配置，使用 ingressClassName
+# 生产环境配置，包含基础配置和生产环境特有配置
 
+# K3s 通用配置
+kube-dns:
+  enabled: false
+kubeProxy:
+  enabled: false
+prometheus-node-exporter:
+  hostRootfs: false
+
+# 生产环境特有配置
 prometheus:
   ingress:
     enabled: true
@@ -12,7 +21,9 @@ prometheus:
       - secretName: prometheus-liuovo-com-tls
         hosts: [ "prometheus.liuovo.com" ]
 
+# Grafana 配置 (包含默认密码和生产环境 Ingress)
 grafana:
+  adminPassword: "prom-operator"
   ingress:
     enabled: true
     ingressClassName: "traefik"
@@ -32,4 +43,4 @@ alertmanager:
     hosts: [ "alertmanager.liuovo.com" ]
     tls:
       - secretName: alertmanager-liuovo-com-tls
-        hosts: 
+        hosts: [ "alertmanager.liuovo.com" ]

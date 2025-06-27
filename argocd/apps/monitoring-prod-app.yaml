@@ -18,7 +18,7 @@ spec:
     repoURL: https://github.com/liuc-c/k3s-cluster-argocd.git
 
     # 指向我们为生产环境创建的 Kustomize overlay 目录
-    path: apps/monitoring/overlays/prod
+    path: apps/monitoring/prod
 
     # 跟踪默认分支 (例如 main 或 master) 的最新变更
     targetRevision: HEAD

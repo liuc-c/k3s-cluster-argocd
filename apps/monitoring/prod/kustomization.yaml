@@ -10,6 +10,4 @@ helmCharts:
   version: 75.6.0
   releaseName: monitoring-stack
   namespace: monitoring
-  valuesFile: ../../base/values.yaml      # 主要的 values 文件
-  additionalValuesFiles:
-    - values-prod.yaml                    # 生产环境覆盖配置
+  valuesFile: values-prod.yaml            # 包含所有配置的 values 文件
