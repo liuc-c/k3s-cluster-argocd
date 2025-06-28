@@ -10,30 +10,15 @@ metadata:
     app.kubernetes.io/part-of: vault-system
 data:
   vault.hcl: |
-    # Vault 服务器配置文件 - 兼容 Vault 1.20.0+
-
-    # 存储后端配置 - 使用文件存储
     storage "file" {
       path = "/vault/data"
     }
 
-    # 监听器配置
     listener "tcp" {
       address     = "0.0.0.0:8200"
       tls_disable = 1
     }
 
-    # API 地址配置
     api_addr = "http://127.0.0.1:8200"
-
-    # UI 配置
     ui = true
-
-    # 日志配置
-    log_level = "INFO"
-
-    # 禁用 mlock（在容器环境中必需）
     disable_mlock = true
-
-    # 集群配置（单节点模式）
-    cluster_name = "vault-cluster"
