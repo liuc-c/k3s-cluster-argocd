@@ -19,13 +19,6 @@ namespace: nezha-dev
 commonLabels:
   environment: dev
   tier: development
-  app.kubernetes.io/environment: dev
-
-# 4. 开发环境特定注解
-commonAnnotations:
-  environment: development
-  deployment.kubernetes.io/revision: "1"
-  gitops.argoproj.io/environment: dev
 
 # 5. 开发环境资源配置（较小的资源限制）
 patches:

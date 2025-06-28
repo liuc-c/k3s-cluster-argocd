@@ -19,13 +19,6 @@ namespace: nezha-prod
 commonLabels:
   environment: prod
   tier: production
-  app.kubernetes.io/environment: prod
-
-# 4. 生产环境特定注解
-commonAnnotations:
-  environment: production
-  deployment.kubernetes.io/revision: "1"
-  gitops.argoproj.io/environment: prod
 
 # 5. 应用补丁文件（为生产环境优化配置）
 patches:
