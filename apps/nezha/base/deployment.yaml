@@ -57,16 +57,8 @@ spec:
             limits:
               memory: "1Gi"
               cpu: "1000m"
-          # 安全上下文
-          securityContext:
-            runAsNonRoot: true
-            runAsUser: 1000
-            runAsGroup: 1000
-            allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: false
-            capabilities:
-              drop:
-                - ALL
+          # 移除安全上下文限制，让容器使用默认配置
+          # securityContext 暂时注释掉，让哪吒面板使用默认权限运行
       volumes:
         - name: data
           persistentVolumeClaim:
