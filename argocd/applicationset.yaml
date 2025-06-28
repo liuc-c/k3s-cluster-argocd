@@ -132,4 +132,4 @@ spec:
   # ApplicationSet 同步策略
   syncPolicy:
     preserveResourcesOnDeletion: false
-    applicationsSync: create-update
+    applicationsSync: create-update-delete
