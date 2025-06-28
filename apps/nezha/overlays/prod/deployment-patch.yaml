@@ -1,0 +1,56 @@
+# 哪吒面板生产环境部署补丁
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nezha-dashboard
+spec:
+  template:
+    spec:
+      containers:
+        - name: nezha-dashboard
+          # 生产环境特定的环境变量
+          env:
+            - name: TZ
+              value: "Asia/Shanghai"
+            # 如果需要配置数据库连接等，可以在这里添加
+            # - name: DATABASE_URL
+            #   valueFrom:
+            #     secretKeyRef:
+            #       name: nezha-secrets
+            #       key: database-url
+            # 如果需要配置 GitHub OAuth 等，可以在这里添加
+            # - name: GITHUB_CLIENT_ID
+            #   valueFrom:
+            #     secretKeyRef:
+            #       name: nezha-secrets
+            #       key: github-client-id
+            # - name: GITHUB_CLIENT_SECRET
+            #   valueFrom:
+            #     secretKeyRef:
+            #       name: nezha-secrets
+            #       key: github-client-secret
+          # 生产环境资源配置优化
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "300m"
+            limits:
+              memory: "2Gi"
+              cpu: "2000m"
+          # 生产环境健康检查优化
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 15
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 10
+            failureThreshold: 3

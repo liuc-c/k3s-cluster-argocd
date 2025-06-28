@@ -1,0 +1,8 @@
+# 哪吒面板命名空间定义
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: nezha
+  labels:
+    app.kubernetes.io/name: nezha
+    app.kubernetes.io/component: namespace

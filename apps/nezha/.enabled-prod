@@ -1,0 +1,21 @@
+# 启用标记文件：哪吒面板生产环境
+# 此文件的存在表示哪吒面板应用的生产环境已启用
+# 删除此文件将禁用该应用在 ArgoCD 中的生成
+
+# 应用信息
+app: nezha
+environment: prod
+enabled: true
+
+# 创建时间和原因
+created_at: 2025-06-28
+created_by: GitOps Administrator
+reason: 部署哪吒面板监控系统到生产环境
+
+# 应用描述
+description: |
+  哪吒面板是一个轻量级的服务器监控面板，支持：
+  - 服务器状态监控
+  - 实时性能数据展示
+  - 告警通知功能
+  - 多服务器管理

@@ -1,0 +1,40 @@
+# 哪吒面板生产环境 Kustomization 文件
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: nezha-prod
+  annotations:
+    config.kubernetes.io/local-config: "true"
+
+# 1. 指向基础配置和添加本目录独有的资源
+resources:
+  - ../../base
+  - ingress.yaml
+
+# 2. 将本目录下的所有资源都部署在生产环境特定的命名空间中
+namespace: nezha-prod
+
+# 3. 为生产环境添加特定标签
+commonLabels:
+  environment: prod
+  tier: production
+  app.kubernetes.io/environment: prod
+
+# 4. 生产环境特定注解
+commonAnnotations:
+  environment: production
+  deployment.kubernetes.io/revision: "1"
+  gitops.argoproj.io/environment: prod
+
+# 5. 应用补丁文件（为生产环境优化配置）
+patches:
+  - path: deployment-patch.yaml
+    target:
+      kind: Deployment
+      name: nezha-dashboard
+
+# 6. 镜像标签覆盖（生产环境使用稳定版本）
+images:
+  - name: ghcr.io/nezhahq/nezha
+    newTag: "latest"  # 可以根据需要指定具体版本号

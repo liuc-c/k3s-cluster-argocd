@@ -1,0 +1,15 @@
+# 哪吒面板数据持久化存储声明
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nezha-data-pvc
+  labels:
+    app.kubernetes.io/name: nezha
+    app.kubernetes.io/component: storage
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi  # 哪吒面板需要存储监控数据，给予更多空间
+  storageClassName: local-path  # 使用 K3s 默认的 local-path 存储类

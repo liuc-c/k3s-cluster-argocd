@@ -1,0 +1,51 @@
+# 哪吒面板生产环境 Ingress 配置
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: nezha-dashboard-ingress
+  labels:
+    app.kubernetes.io/name: nezha
+    app.kubernetes.io/component: ingress
+  annotations:
+    # Traefik 配置
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
+
+    # Let's Encrypt 证书管理
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+
+    # 安全头配置
+    traefik.ingress.kubernetes.io/router.middlewares: default-security-headers@kubernetescrd
+
+    # 速率限制（可选）
+    # traefik.ingress.kubernetes.io/router.middlewares: default-rate-limit@kubernetescrd
+spec:
+  ingressClassName: traefik
+  rules:
+    # 面板访问域名 - 用于 Web UI 访问
+    - host: "nezha.liuovo.com"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: nezha-dashboard
+                port:
+                  number: 8008
+    # Agent 通信域名 - 用于接收 agent 数据
+    - host: "nezha-agent.liuovo.com"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: nezha-dashboard
+                port:
+                  number: 8008
+  tls:
+    - hosts:
+        - "nezha.liuovo.com"
+        - "nezha-agent.liuovo.com"
+      secretName: nezha-dashboard-tls

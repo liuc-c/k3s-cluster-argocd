@@ -1,0 +1,40 @@
+# 哪吒面板开发环境 Kustomization 文件
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: nezha-dev
+  annotations:
+    config.kubernetes.io/local-config: "true"
+
+# 1. 指向基础配置
+resources:
+  - ../../base
+  - ingress.yaml
+
+# 2. 将本目录下的所有资源都部署在开发环境特定的命名空间中
+namespace: nezha-dev
+
+# 3. 为开发环境添加特定标签
+commonLabels:
+  environment: dev
+  tier: development
+  app.kubernetes.io/environment: dev
+
+# 4. 开发环境特定注解
+commonAnnotations:
+  environment: development
+  deployment.kubernetes.io/revision: "1"
+  gitops.argoproj.io/environment: dev
+
+# 5. 开发环境资源配置（较小的资源限制）
+patches:
+  - path: deployment-patch.yaml
+    target:
+      kind: Deployment
+      name: nezha-dashboard
+
+# 6. 使用最新镜像进行开发测试
+images:
+  - name: ghcr.io/nezhahq/nezha
+    newTag: "latest"
