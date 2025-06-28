@@ -45,7 +45,7 @@ spec:
 
 ---
 # Traefik 中间件 - 安全头配置
-apiVersion: traefik.containo.us/v1alpha1
+apiVersion: traefik.io/v1alpha1
 kind: Middleware
 metadata:
   name: vault-security-headers
