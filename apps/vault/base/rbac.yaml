@@ -1,0 +1,109 @@
+# HashiCorp Vault RBAC 配置
+# 为 Vault 提供必要的 Kubernetes 权限
+
+---
+# ServiceAccount
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vault
+  labels:
+    app.kubernetes.io/name: vault
+    app.kubernetes.io/component: serviceaccount
+    app.kubernetes.io/part-of: vault-system
+automountServiceAccountToken: true
+
+---
+# ClusterRole - Vault 需要的集群级权限
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: vault
+  labels:
+    app.kubernetes.io/name: vault
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/part-of: vault-system
+rules:
+  # Vault Kubernetes Auth Method 需要的权限
+  - apiGroups: [""]
+    resources: ["serviceaccounts"]
+    verbs: ["get", "list"]
+  - apiGroups: [""]
+    resources: ["serviceaccounts/token"]
+    verbs: ["create"]
+  
+  # TokenReview 权限（用于验证 service account tokens）
+  - apiGroups: ["authentication.k8s.io"]
+    resources: ["tokenreviews"]
+    verbs: ["create"]
+  
+  # SubjectAccessReview 权限（用于授权检查）
+  - apiGroups: ["authorization.k8s.io"]
+    resources: ["subjectaccessreviews"]
+    verbs: ["create"]
+
+---
+# ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: vault
+  labels:
+    app.kubernetes.io/name: vault
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/part-of: vault-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: vault
+subjects:
+  - kind: ServiceAccount
+    name: vault
+    namespace: vault
+
+---
+# Role - 命名空间级权限
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: vault
+  namespace: vault
+  labels:
+    app.kubernetes.io/name: vault
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/part-of: vault-system
+rules:
+  # Secret 管理权限
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list", "create", "update", "patch", "delete"]
+  
+  # ConfigMap 权限
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list"]
+  
+  # Pod 权限（用于健康检查和调试）
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list"]
+
+---
+# RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: vault
+  namespace: vault
+  labels:
+    app.kubernetes.io/name: vault
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/part-of: vault-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: vault
+subjects:
+  - kind: ServiceAccount
+    name: vault
+    namespace: vault

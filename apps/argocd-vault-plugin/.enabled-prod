@@ -1,0 +1,31 @@
+# 启用标记文件：ArgoCD Vault Plugin 生产环境
+# 此文件的存在表示 ArgoCD Vault Plugin 应用的生产环境已启用
+# 删除此文件将禁用该应用在 ArgoCD 中的生成
+
+# 应用信息
+app: argocd-vault-plugin
+environment: prod
+enabled: true
+
+# 部署信息
+created_date: "2025-06-28"
+created_by: "GitOps Administrator"
+purpose: "ArgoCD 与 HashiCorp Vault 集成插件"
+
+# 依赖关系
+dependencies:
+  - argocd       # ArgoCD 核心服务
+  - vault        # HashiCorp Vault 服务
+
+# 集成说明
+integration_notes: |
+  - 为 ArgoCD 添加 Vault Plugin 支持
+  - 修改 ArgoCD ConfigMap 和 Repo Server
+  - 配置 Kubernetes 认证方法
+  - 需要在 Vault 部署完成后手动配置认证
+
+# 安全注意事项
+security_notes: |
+  - 使用 Kubernetes 服务账户认证
+  - 配置了最小权限原则的 RBAC
+  - 支持密钥自动注入到 ArgoCD 应用中

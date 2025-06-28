@@ -1,0 +1,180 @@
+# Vault Kubernetes Auth 配置
+# 这是一个 Job，用于在 Vault 中配置 Kubernetes 认证方法
+
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: vault-k8s-auth-config
+  namespace: vault
+  labels:
+    app.kubernetes.io/name: vault-k8s-auth-config
+    app.kubernetes.io/part-of: vault-system
+    app.kubernetes.io/component: config
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: vault-k8s-auth-config
+    spec:
+      restartPolicy: OnFailure
+      serviceAccountName: vault-k8s-auth-config
+      
+      containers:
+        - name: vault-config
+          image: hashicorp/vault:1.20.0
+          command: ["/bin/sh"]
+          args:
+            - -c
+            - |
+              set -e
+              
+              # 等待 Vault 服务可用
+              echo "等待 Vault 服务启动..."
+              until vault status; do
+                echo "Vault 尚未就绪，等待 5 秒..."
+                sleep 5
+              done
+              
+              # 检查 Vault 是否已初始化
+              if ! vault status | grep -q "Initialized.*true"; then
+                echo "错误：Vault 尚未初始化。请先初始化 Vault。"
+                exit 1
+              fi
+              
+              # 检查 Vault 是否已解封
+              if vault status | grep -q "Sealed.*true"; then
+                echo "错误：Vault 处于密封状态。请先解封 Vault。"
+                exit 1
+              fi
+              
+              # 启用 Kubernetes 认证方法（如果尚未启用）
+              if ! vault auth list | grep -q "kubernetes/"; then
+                echo "启用 Kubernetes 认证方法..."
+                vault auth enable kubernetes
+              else
+                echo "Kubernetes 认证方法已启用"
+              fi
+              
+              # 获取 Kubernetes 集群信息
+              KUBERNETES_HOST="https://$KUBERNETES_SERVICE_HOST:$KUBERNETES_SERVICE_PORT"
+              TOKEN_REVIEWER_JWT=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
+              KUBERNETES_CA_CERT=$(cat /var/run/secrets/kubernetes.io/serviceaccount/ca.crt)
+              
+              # 配置 Kubernetes 认证方法
+              echo "配置 Kubernetes 认证方法..."
+              vault write auth/kubernetes/config \
+                token_reviewer_jwt="$TOKEN_REVIEWER_JWT" \
+                kubernetes_host="$KUBERNETES_HOST" \
+                kubernetes_ca_cert="$KUBERNETES_CA_CERT" \
+                issuer="https://kubernetes.default.svc.cluster.local"
+              
+              # 创建 ArgoCD 角色
+              echo "创建 ArgoCD 角色..."
+              vault write auth/kubernetes/role/argocd \
+                bound_service_account_names=argocd-repo-server \
+                bound_service_account_namespaces=argocd \
+                policies=argocd-policy \
+                ttl=24h
+              
+              # 创建 ArgoCD 策略
+              echo "创建 ArgoCD 策略..."
+              vault policy write argocd-policy - <<EOF
+              # ArgoCD 可以读取所有 secret 路径
+              path "secret/data/*" {
+                capabilities = ["read"]
+              }
+              
+              path "secret/metadata/*" {
+                capabilities = ["list", "read"]
+              }
+              
+              # ArgoCD 可以读取 KV v1 secrets
+              path "secret/*" {
+                capabilities = ["read"]
+              }
+              
+              # 允许 ArgoCD 列出 secret 引擎
+              path "secret/" {
+                capabilities = ["list"]
+              }
+              
+              # 允许 ArgoCD 读取自己的 token 信息
+              path "auth/token/lookup-self" {
+                capabilities = ["read"]
+              }
+              
+              path "auth/token/renew-self" {
+                capabilities = ["update"]
+              }
+              EOF
+              
+              echo "Vault Kubernetes 认证配置完成！"
+          
+          env:
+            - name: VAULT_ADDR
+              value: "http://vault.vault.svc.cluster.local:8200"
+            - name: VAULT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: vault-root-token
+                  key: token
+                  optional: true
+          
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 100
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+
+---
+# ServiceAccount for the configuration job
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vault-k8s-auth-config
+  namespace: vault
+  labels:
+    app.kubernetes.io/name: vault-k8s-auth-config
+    app.kubernetes.io/part-of: vault-system
+automountServiceAccountToken: true
+
+---
+# ClusterRole for the configuration job
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: vault-k8s-auth-config
+  labels:
+    app.kubernetes.io/name: vault-k8s-auth-config
+    app.kubernetes.io/part-of: vault-system
+rules:
+  - apiGroups: [""]
+    resources: ["serviceaccounts"]
+    verbs: ["get", "list"]
+  - apiGroups: ["authentication.k8s.io"]
+    resources: ["tokenreviews"]
+    verbs: ["create"]
+
+---
+# ClusterRoleBinding for the configuration job
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: vault-k8s-auth-config
+  labels:
+    app.kubernetes.io/name: vault-k8s-auth-config
+    app.kubernetes.io/part-of: vault-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: vault-k8s-auth-config
+subjects:
+  - kind: ServiceAccount
+    name: vault-k8s-auth-config
+    namespace: vault

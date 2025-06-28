@@ -1,0 +1,161 @@
+# Vault 初始化 Job
+# 用于初始化 Vault 并生成根 token 和解封密钥
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: vault-init
+  namespace: vault
+  labels:
+    app.kubernetes.io/name: vault-init
+    app.kubernetes.io/part-of: vault-system
+    app.kubernetes.io/component: init
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: vault-init
+    spec:
+      restartPolicy: OnFailure
+      serviceAccountName: vault-init
+      
+      containers:
+        - name: vault-init
+          image: hashicorp/vault:1.20.0
+          command: ["/bin/sh"]
+          args:
+            - -c
+            - |
+              set -e
+              
+              # 等待 Vault 服务可用
+              echo "等待 Vault 服务启动..."
+              until vault status 2>/dev/null; do
+                echo "Vault 尚未就绪，等待 5 秒..."
+                sleep 5
+              done
+              
+              # 检查 Vault 是否已经初始化
+              if vault status | grep -q "Initialized.*true"; then
+                echo "Vault 已经初始化，跳过初始化步骤"
+                exit 0
+              fi
+              
+              echo "开始初始化 Vault..."
+              
+              # 初始化 Vault（5 个密钥分片，需要 3 个来解封）
+              vault operator init \
+                -key-shares=5 \
+                -key-threshold=3 \
+                -format=json > /tmp/vault-init.json
+              
+              # 提取根 token 和解封密钥
+              ROOT_TOKEN=$(cat /tmp/vault-init.json | jq -r '.root_token')
+              UNSEAL_KEY_1=$(cat /tmp/vault-init.json | jq -r '.unseal_keys_b64[0]')
+              UNSEAL_KEY_2=$(cat /tmp/vault-init.json | jq -r '.unseal_keys_b64[1]')
+              UNSEAL_KEY_3=$(cat /tmp/vault-init.json | jq -r '.unseal_keys_b64[2]')
+              UNSEAL_KEY_4=$(cat /tmp/vault-init.json | jq -r '.unseal_keys_b64[3]')
+              UNSEAL_KEY_5=$(cat /tmp/vault-init.json | jq -r '.unseal_keys_b64[4]')
+              
+              # 创建包含根 token 的 Secret
+              kubectl create secret generic vault-root-token \
+                --from-literal=token="$ROOT_TOKEN" \
+                --namespace=vault \
+                --dry-run=client -o yaml | kubectl apply -f -
+              
+              # 创建包含解封密钥的 Secret
+              kubectl create secret generic vault-unseal-keys \
+                --from-literal=key1="$UNSEAL_KEY_1" \
+                --from-literal=key2="$UNSEAL_KEY_2" \
+                --from-literal=key3="$UNSEAL_KEY_3" \
+                --from-literal=key4="$UNSEAL_KEY_4" \
+                --from-literal=key5="$UNSEAL_KEY_5" \
+                --namespace=vault \
+                --dry-run=client -o yaml | kubectl apply -f -
+              
+              echo "Vault 初始化完成！"
+              echo "根 token 和解封密钥已保存到 Kubernetes Secrets 中"
+              echo "请妥善保管这些密钥！"
+              
+              # 自动解封 Vault
+              echo "开始解封 Vault..."
+              vault operator unseal "$UNSEAL_KEY_1"
+              vault operator unseal "$UNSEAL_KEY_2"
+              vault operator unseal "$UNSEAL_KEY_3"
+              
+              echo "Vault 解封完成！"
+              
+              # 启用 KV secrets 引擎
+              export VAULT_TOKEN="$ROOT_TOKEN"
+              vault secrets enable -path=secret kv-v2
+              
+              echo "KV secrets 引擎已启用"
+          
+          env:
+            - name: VAULT_ADDR
+              value: "http://vault.vault.svc.cluster.local:8200"
+          
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 100
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      
+      volumes:
+        - name: tmp
+          emptyDir: {}
+
+---
+# ServiceAccount for the init job
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vault-init
+  namespace: vault
+  labels:
+    app.kubernetes.io/name: vault-init
+    app.kubernetes.io/part-of: vault-system
+automountServiceAccountToken: true
+
+---
+# Role for the init job
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: vault-init
+  namespace: vault
+  labels:
+    app.kubernetes.io/name: vault-init
+    app.kubernetes.io/part-of: vault-system
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["create", "get", "list", "update", "patch"]
+
+---
+# RoleBinding for the init job
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: vault-init
+  namespace: vault
+  labels:
+    app.kubernetes.io/name: vault-init
+    app.kubernetes.io/part-of: vault-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: vault-init
+subjects:
+  - kind: ServiceAccount
+    name: vault-init
+    namespace: vault

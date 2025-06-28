@@ -1,0 +1,36 @@
+# ArgoCD Vault Plugin 生产环境 Kustomization
+# 加载基础配置并应用生产环境特定的覆盖
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: argocd-vault-plugin-prod
+  annotations:
+    config.kubernetes.io/local-config: "true"
+
+# 指向基础配置
+resources:
+  - ../../base
+
+# 生产环境特定标签
+commonLabels:
+  environment: prod
+  tier: production
+  app.kubernetes.io/environment: prod
+
+# 生产环境注解
+commonAnnotations:
+  deployment.kubernetes.io/environment: "production"
+  vault.hashicorp.com/environment: "prod"
+  config.kubernetes.io/origin: "argocd-vault-plugin-prod"
+
+# 生产环境配置补丁（可选）
+# patches:
+# - patch: |-
+#     - op: replace
+#       path: /spec/template/spec/containers/0/env/0/value
+#       value: "https://vault.liuovo.com"
+#   target:
+#     kind: Deployment
+#     name: argocd-repo-server
+#     namespace: argocd

@@ -1,0 +1,26 @@
+# 启用标记文件：HashiCorp Vault 生产环境
+# 此文件的存在表示 HashiCorp Vault 应用的生产环境已启用
+# 删除此文件将禁用该应用在 ArgoCD 中的生成
+
+# 应用信息
+app: vault
+environment: prod
+enabled: true
+
+# 部署信息
+created_date: "2025-06-28"
+created_by: "GitOps Administrator"
+purpose: "HashiCorp Vault 密钥管理服务"
+
+# 依赖关系
+dependencies:
+  - cert-manager  # TLS 证书管理
+  - traefik      # Ingress 控制器
+
+# 安全注意事项
+security_notes: |
+  - Vault 部署在独立的 vault 命名空间中
+  - 使用 TLS 加密所有外部通信
+  - 配置了适当的 RBAC 权限
+  - 启用了自动备份机制
+  - 需要手动初始化和解封
