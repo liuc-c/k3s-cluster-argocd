@@ -26,6 +26,8 @@ spec:
         runAsUser: 100
         runAsGroup: 1000
         fsGroup: 1000
+        # 确保挂载的卷有正确的权限
+        fsGroupChangePolicy: "OnRootMismatch"
       
       containers:
         - name: vault
@@ -35,7 +37,7 @@ spec:
           # 容器安全上下文
           securityContext:
             allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: true
+            readOnlyRootFilesystem: false  # Vault 需要写入临时文件
             capabilities:
               drop:
                 - ALL
@@ -68,16 +70,10 @@ spec:
           
           # 启动命令
           command:
-            - "/bin/sh"
-            - "-ec"
+            - "vault"
           args:
-            - |
-              # 确保数据目录存在并设置正确权限
-              mkdir -p /vault/data
-              chown -R vault:vault /vault/data
-              
-              # 启动 Vault 服务器
-              exec vault server -config=/vault/config/vault.hcl
+            - "server"
+            - "-config=/vault/config/vault.hcl"
           
           # 存储卷挂载
           volumeMounts:
