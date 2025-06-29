@@ -1,0 +1,22 @@
+# 哪吒面板 Agent gRPC 通信专用 IngressRoute
+# 使用 Traefik 原生 IngressRoute 提供最佳的 gRPC 支持
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: nezha-agent-grpc
+  namespace: nezha-prod
+  labels:
+    app: nezha-dashboard
+    component: agent-grpc
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`nezha-agent.liuovo.com`)
+      kind: Rule
+      services:
+        - name: nezha-dashboard
+          port: 8008
+          scheme: h2c  # HTTP/2 Cleartext for gRPC
+  tls:
+    secretName: nezha-dashboard-tls

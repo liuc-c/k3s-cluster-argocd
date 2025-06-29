@@ -17,7 +17,8 @@ apps/nezha/
 └── overlays/                  # 环境特定配置
     └── prod/                  # 生产环境
         ├── kustomization.yaml
-        └── ingress.yaml
+        ├── ingress.yaml           # Web UI HTTP 访问
+        └── ingressroute-grpc.yaml # Agent gRPC 通信
 ```
 
 ## 🔧 配置说明
@@ -45,13 +46,22 @@ apps/nezha/
 
 1. **nezha.liuovo.com**
    - 用途：Web UI 公开访问
+   - 技术：标准 Ingress (HTTP/HTTPS)
    - 特点：支持 CDN 加速
    - 访问：管理员通过此域名访问面板
 
 2. **nezha-agent.liuovo.com**
-   - 用途：Agent 数据通信
-   - 特点：不使用 CDN，避免 WebSocket 通信问题
+   - 用途：Agent gRPC 数据通信
+   - 技术：Traefik IngressRoute (gRPC over HTTPS)
+   - 特点：不使用 CDN，原生 gRPC 协议支持
    - 访问：服务器 Agent 通过此域名上报数据
+
+### 技术实现
+
+- **协议分离**：Web UI 使用 HTTP，Agent 使用 gRPC
+- **最佳实践**：使用 Traefik IngressRoute 提供原生 gRPC 支持
+- **性能优化**：HTTP/2 协议，无需额外转换层
+- **证书管理**：Ingress 为两个域名申请证书，IngressRoute 复用证书
 
 
 

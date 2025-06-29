@@ -1,5 +1,6 @@
 # 哪吒面板生产环境 Ingress 配置
-# 配置两个域名：nezha.liuovo.com（CDN公开访问）和 nezha-agent.liuovo.com（Agent通信）
+# 处理 Web UI 访问，同时为两个域名申请 TLS 证书
+# Agent gRPC 通信由 IngressRoute 处理，但复用此处申请的证书
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -20,19 +21,8 @@ spec:
                 name: nezha-dashboard
                 port:
                   number: 8008
-    # Agent 通信域名 - 用于 Agent 数据上报（不使用 CDN）
-    - host: "nezha-agent.liuovo.com"
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: nezha-dashboard
-                port:
-                  number: 8008
   tls:
     - hosts:
         - "nezha.liuovo.com"
-        - "nezha-agent.liuovo.com"
+        - "nezha-agent.liuovo.com"  # 同时为 Agent 域名申请证书
       secretName: nezha-dashboard-tls
